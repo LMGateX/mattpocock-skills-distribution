@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 1,
+  "repository": "https://github.com/mattpocock/skills",
+  "remote": "upstream",
+  "branch": "main",
+  "commit": "3cca18b368ae95cdbdebbff572ccafa662551015",
+  "commitDate": "2026-09-04T09:43:27+01:00",
+  "recordedAt": "2026-09-08T05:22:39Z",
+  "contentPolicy": "Upstream-owned files remain unchanged; distribution metadata is an overlay.",
+  "betaSkills": {
+    "implement-spec": {
+      "path": "./skills/in-progress/implement-spec",
+      "introducedByCommit": "84b5ee5afd738b6a3484e62509b84b3b573c5be3",
+      "baselineFixCommit": "5b15a47f2d7150f545fbcacbfe381787fc0230dc",
+      "skillGitBlob": "d5097f847fc003935599a7f7bf8f0f7186427910"
+    }
+  },
+  "upstreamContentSha256": "e7bcca432ff838a071214bf578b7fd993a0c86ef2edbc1b7d3abad1f861c76f0"
+}
