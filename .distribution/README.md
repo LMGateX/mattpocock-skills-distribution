@@ -2,10 +2,9 @@
 
 This directory is the only distribution-owned overlay on top of upstream `mattpocock/skills`.
 
-- `upstream.json` pins provenance and the selected upstream beta skill.
-- `channels/stable.json` is the resolved promoted set from `.claude-plugin/plugin.json`.
-- `channels/beta.json` is the stable set plus official upstream `implement-spec`.
-- `scripts/generate-channels.mjs` regenerates the channel manifests.
+- `upstream.json` pins the upstream commit, its date, its whole-tree content fingerprint, and when it was recorded.
+- `channels/stable.json` is the resolved promoted set from `.claude-plugin/plugin.json` at that commit.
+- `scripts/generate-channels.mjs` regenerates the channel manifests and removes channel files that are no longer generated.
 - `scripts/verify-channels.mjs` enforces channel and upstream-content invariants.
 - `scripts/sync-upstream.sh` updates the fork from `upstream/main` without publishing.
 

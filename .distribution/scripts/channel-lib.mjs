@@ -77,17 +77,15 @@ export function workingContentDigest() {
 export async function buildChannelManifests() {
   const upstream = await readJson('.distribution/upstream.json')
   const plugin = await readJson('.claude-plugin/plugin.json')
-  const implementSpec = upstream.betaSkills?.['implement-spec']?.path
 
   if (!Array.isArray(plugin.skills) || plugin.skills.length === 0) {
     throw new Error('Upstream .claude-plugin/plugin.json has no skills array')
   }
-  if (typeof implementSpec !== 'string' || implementSpec.length === 0) {
-    throw new Error('upstream.json does not declare betaSkills.implement-spec.path')
-  }
 
-  const stableSkills = [...plugin.skills]
-  const betaSkills = [...stableSkills, implementSpec]
+  const skills = [...plugin.skills]
+  if (new Set(skills).size !== skills.length) {
+    throw new Error('Upstream .claude-plugin/plugin.json lists a skill more than once')
+  }
 
   return {
     stable: {
@@ -96,17 +94,7 @@ export async function buildChannelManifests() {
       stability: 'stable',
       upstreamCommit: upstream.commit,
       generatedFrom: '.claude-plugin/plugin.json',
-      skills: stableSkills
-    },
-    beta: {
-      schemaVersion: 1,
-      channel: 'beta',
-      stability: 'beta',
-      upstreamCommit: upstream.commit,
-      generatedFrom: '.claude-plugin/plugin.json + .distribution/upstream.json',
-      extends: 'stable',
-      additionalSkills: [implementSpec],
-      skills: betaSkills
+      skills
     }
   }
 }

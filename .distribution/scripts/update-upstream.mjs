@@ -17,19 +17,14 @@ if (workingContentSha256 !== expectedContentSha256) {
   throw new Error('Working upstream-owned content does not match upstream/main; refusing to record provenance')
 }
 
-const skillRelativePath = upstream.betaSkills['implement-spec'].path.replace(/^\.\//, '') + '/SKILL.md'
-const skillGitBlob = git('rev-parse', commit + ':' + skillRelativePath)
 const changed =
   upstream.commit !== commit ||
   upstream.commitDate !== commitDate ||
-  upstream.upstreamContentSha256 !== expectedContentSha256 ||
-  upstream.betaSkills['implement-spec'].skillGitBlob !== skillGitBlob
+  upstream.upstreamContentSha256 !== expectedContentSha256
 
 upstream.commit = commit
 upstream.commitDate = commitDate
 upstream.upstreamContentSha256 = expectedContentSha256
-upstream.betaSkills['implement-spec'].skillGitBlob = skillGitBlob
-delete upstream.betaSkills['implement-spec'].skillSha256
 if (changed) {
   upstream.recordedAt = new Date().toISOString().replace(/\.\d{3}Z$/, 'Z')
 }

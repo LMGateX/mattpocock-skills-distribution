@@ -1,10 +1,11 @@
 import { execFileSync } from 'node:child_process'
-import { readFile, stat } from 'node:fs/promises'
+import { readdir, readFile, stat } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import {
   buildChannelManifests,
   commitContentDigest,
   readJson,
+  renderJson,
   root,
   skillNameFromMarkdown,
   workingContentDigest
@@ -28,33 +29,32 @@ function assert(condition, message) {
 }
 
 const expected = await buildChannelManifests()
-const stablePath = join(root, '.distribution/channels/stable.json')
-const betaPath = join(root, '.distribution/channels/beta.json')
-const [stableText, betaText] = await Promise.all([
-  readFile(stablePath, 'utf8'),
-  readFile(betaPath, 'utf8')
-])
+const channelDirectory = join(root, '.distribution/channels')
 
-const stable = JSON.parse(stableText)
-const beta = JSON.parse(betaText)
-assert(JSON.stringify(stable) === JSON.stringify(expected.stable), 'stable.json is stale; run generate-channels.mjs')
-assert(JSON.stringify(beta) === JSON.stringify(expected.beta), 'beta.json is stale; run generate-channels.mjs')
-const stableSet = new Set(stable.skills)
-const betaSet = new Set(beta.skills)
-assert(stableSet.size === stable.skills.length, 'stable channel contains duplicate paths')
-assert(betaSet.size === beta.skills.length, 'beta channel contains duplicate paths')
-assert(beta.skills.length === stable.skills.length + 1, 'beta must contain exactly one skill beyond stable')
-for (const skillPath of stable.skills) assert(betaSet.has(skillPath), 'beta is missing stable skill ' + skillPath)
-assert(beta.additionalSkills.length === 1, 'beta must declare exactly one additional skill')
-assert(beta.additionalSkills[0] === './skills/in-progress/implement-spec', 'beta addition must be official implement-spec')
-assert(!stableSet.has(beta.additionalSkills[0]), 'implement-spec must not leak into stable before upstream promotion')
+const expectedNames = Object.keys(expected).map((channel) => channel + '.json').sort()
+const presentNames = (await readdir(channelDirectory)).filter((name) => name.endsWith('.json')).sort()
+assert(
+  JSON.stringify(presentNames) === JSON.stringify(expectedNames),
+  'channel directory does not contain exactly the generated channels; found ' + presentNames.join(', ')
+)
 
-for (const skillPath of beta.skills) {
-  const directory = join(root, skillPath.replace(/^\.\//, ''))
-  assert((await stat(directory)).isDirectory(), 'skill directory is missing: ' + skillPath)
-  const markdown = await readFile(join(directory, 'SKILL.md'), 'utf8')
-  const declaredName = skillNameFromMarkdown(markdown)
-  assert(declaredName === basename(directory), skillPath + ' declares name ' + declaredName)
+const channels = {}
+for (const [channel, manifest] of Object.entries(expected)) {
+  const text = await readFile(join(channelDirectory, channel + '.json'), 'utf8')
+  assert(text === renderJson(manifest), channel + '.json is stale; run generate-channels.mjs')
+  channels[channel] = JSON.parse(text)
+}
+
+for (const [channel, manifest] of Object.entries(channels)) {
+  const skillSet = new Set(manifest.skills)
+  assert(skillSet.size === manifest.skills.length, channel + ' channel contains duplicate paths')
+  for (const skillPath of manifest.skills) {
+    const directory = join(root, skillPath.replace(/^\.\//, ''))
+    assert((await stat(directory)).isDirectory(), 'skill directory is missing: ' + skillPath)
+    const markdown = await readFile(join(directory, 'SKILL.md'), 'utf8')
+    const declaredName = skillNameFromMarkdown(markdown)
+    assert(declaredName === basename(directory), skillPath + ' declares name ' + declaredName)
+  }
 }
 
 const upstream = await readJson('.distribution/upstream.json')
@@ -63,10 +63,6 @@ assert(
   localContentSha256 === upstream.upstreamContentSha256,
   'upstream-owned content differs from the recorded release fingerprint'
 )
-
-const implementPath = upstream.betaSkills['implement-spec'].path.replace(/^\.\//, '') + '/SKILL.md'
-const localImplementBlob = git('hash-object', '--path=' + implementPath, implementPath)
-assert(localImplementBlob === upstream.betaSkills['implement-spec'].skillGitBlob, 'implement-spec fingerprint is stale')
 
 const commitIsAvailable = gitSucceeds('cat-file', '-e', upstream.commit + '^{commit}')
 if (commitIsAvailable) {
@@ -78,9 +74,6 @@ if (commitIsAvailable) {
   const mergeHeadAvailable = gitSucceeds('rev-parse', '--verify', 'MERGE_HEAD')
   const mergedIntoPendingMerge = mergeHeadAvailable && gitSucceeds('merge-base', '--is-ancestor', upstream.commit, 'MERGE_HEAD')
   assert(mergedIntoHead || mergedIntoPendingMerge, 'recorded upstream commit is not integrated into this release')
-
-  const recordedImplementBlob = git('rev-parse', upstream.commit + ':' + implementPath)
-  assert(recordedImplementBlob === upstream.betaSkills['implement-spec'].skillGitBlob, 'recorded implement-spec blob is stale')
 } else {
   console.log('INFO: recorded upstream commit object is unavailable; verified release fingerprints instead')
 }
@@ -94,6 +87,6 @@ const untracked = git('ls-files', '--others', '--exclude-standard').split(/\r?\n
 const disallowedUntracked = untracked.filter((path) => !isDistributionPath(path))
 assert(disallowedUntracked.length === 0, 'unexpected untracked upstream paths: ' + disallowedUntracked.join(', '))
 
-console.log('OK: stable=' + stable.skills.length + ', beta=' + beta.skills.length)
-console.log('OK: beta adds only official upstream implement-spec')
+console.log('OK: ' + Object.entries(channels).map(([channel, manifest]) => channel + '=' + manifest.skills.length).join(', '))
+console.log('OK: channels match .claude-plugin/plugin.json exactly')
 console.log('OK: upstream content fingerprint matches ' + upstream.commit)
