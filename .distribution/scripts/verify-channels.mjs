@@ -64,6 +64,35 @@ assert(
   'upstream-owned content differs from the recorded release fingerprint'
 )
 
+// The channel set is a public interface: every channel this distribution has ever
+// published must keep existing, because profiles select them by name. beta always
+// extends stable; when nothing is previewed the two resolve to the same set.
+for (const channel of ['stable', 'beta']) {
+  assert(Object.hasOwn(channels, channel), 'the closed channel set must always declare ' + channel)
+}
+assert(
+  Object.keys(channels).length === 2,
+  'unexpected channel declared; add it to the closed set deliberately: ' + Object.keys(channels).join(', ')
+)
+assert(channels.stable.extends === undefined, 'stable must not extend another channel')
+assert(channels.beta.extends === 'stable', 'beta must extend stable')
+
+const stableSet = new Set(channels.stable.skills)
+const betaSet = new Set(channels.beta.skills)
+for (const skillPath of channels.stable.skills) assert(betaSet.has(skillPath), 'beta is missing stable Skill ' + skillPath)
+
+const actualAdditional = channels.beta.skills.filter((skillPath) => !stableSet.has(skillPath)).sort()
+const declaredAdditional = [...channels.beta.additionalSkills].sort()
+assert(
+  JSON.stringify(actualAdditional) === JSON.stringify(declaredAdditional),
+  'beta additionalSkills does not match beta minus stable'
+)
+const previewSkills = [...upstream.previewSkills].sort()
+assert(
+  JSON.stringify(actualAdditional) === JSON.stringify(previewSkills),
+  'beta additions differ from the previewSkills declared in .distribution/upstream.json'
+)
+
 const commitIsAvailable = gitSucceeds('cat-file', '-e', upstream.commit + '^{commit}')
 if (commitIsAvailable) {
   assert(
@@ -88,5 +117,6 @@ const disallowedUntracked = untracked.filter((path) => !isDistributionPath(path)
 assert(disallowedUntracked.length === 0, 'unexpected untracked upstream paths: ' + disallowedUntracked.join(', '))
 
 console.log('OK: ' + Object.entries(channels).map(([channel, manifest]) => channel + '=' + manifest.skills.length).join(', '))
-console.log('OK: channels match .claude-plugin/plugin.json exactly')
+console.log('OK: closed channel set is stable + beta, and beta extends stable')
+console.log('OK: beta additions match the declared previewSkills (' + previewSkills.length + ' previewed)')
 console.log('OK: upstream content fingerprint matches ' + upstream.commit)

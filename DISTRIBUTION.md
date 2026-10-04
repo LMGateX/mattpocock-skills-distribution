@@ -6,11 +6,16 @@ This fork is a thin, reproducible distribution of [mattpocock/skills](https://gi
 
 Upstream promotes skills through `.claude-plugin/plugin.json`, but the promoted set only becomes consumable when upstream cuts a release. This fork exists so that a consumer can pin a commit that is already on upstream's `main` but not yet released, and resolve the promoted skill set from it reproducibly.
 
+Two channels are always published:
+
 - **stable**: exactly the skill paths listed by upstream in `.claude-plugin/plugin.json` at the pinned commit.
+- **beta**: `stable` plus every path listed in `.distribution/upstream.json` under `previewSkills`.
 
-There is one channel. An earlier **beta** channel existed only to carry `skills/in-progress/implement-spec` ahead of upstream. Upstream v1.3 graduated `implement-spec`, `pr`, and `retro` into the promoted set and removed `resolving-merge-conflicts`, so the preview had nothing left to preview and the channel was dropped. A future preview is a deliberate new decision, not a permanent second track.
+`previewSkills` is normally empty. While it is empty the two channels resolve to the **same set**: `beta` exists so that a profile which selected it keeps working, not because it currently leads. When upstream has something under `skills/in-progress/` worth shipping early, adding its path to `previewSkills` makes `beta` lead `stable` with no other change. When upstream promotes that skill, the generator refuses to run until the path is removed from `previewSkills`, so a graduation cannot be missed.
 
-The resolved channel manifest lives under [`.distribution/channels/`](.distribution/channels). It is generated from upstream sources and verified rather than maintained by hand.
+**The channel set is a public interface: a channel is added deliberately and never removed.** Consumers select channels by name, so dropping one breaks every consumer that selected it. `verify-channels.mjs` enforces both the closed set (`stable` + `beta`) and the `beta` ⊇ `stable` relationship.
+
+The resolved channel manifests live under [`.distribution/channels/`](.distribution/channels). They are generated from upstream sources and verified rather than maintained by hand.
 
 ## Current upstream baseline
 
@@ -29,7 +34,9 @@ node .distribution/scripts/verify-channels.mjs
 Verification is self-contained for a checked-out release tag and does not require an `upstream` remote. It checks that:
 
 - `.distribution/channels/` contains exactly the generated channels, with no stale files;
+- the closed channel set is `stable` + `beta`, and `beta` extends `stable`;
 - the stable channel exactly matches the included upstream Claude plugin manifest;
+- the beta additions equal the declared `previewSkills`;
 - every selected skill directory contains a `SKILL.md` whose declared name matches the directory;
 - all upstream-owned files match the release's recorded content fingerprint;
 - when the pinned Git commit object is available, it is integrated into the release and has the same content.

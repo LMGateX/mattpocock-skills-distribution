@@ -74,6 +74,15 @@ export function workingContentDigest() {
   return aggregateEntries(entries)
 }
 
+/**
+ * The two channels this distribution always publishes. `stable` mirrors upstream's
+ * promoted set; `beta` is `stable` plus the explicitly previewed Skills. When
+ * `previewSkills` is empty the two resolve to the same set, which is deliberate:
+ * the channel set is a public interface, and removing a channel would break every
+ * profile that selected it.
+ */
+export const CHANNELS = ['stable', 'beta']
+
 export async function buildChannelManifests() {
   const upstream = await readJson('.distribution/upstream.json')
   const plugin = await readJson('.claude-plugin/plugin.json')
@@ -82,10 +91,24 @@ export async function buildChannelManifests() {
     throw new Error('Upstream .claude-plugin/plugin.json has no skills array')
   }
 
-  const skills = [...plugin.skills]
-  if (new Set(skills).size !== skills.length) {
+  const stableSkills = [...plugin.skills]
+  if (new Set(stableSkills).size !== stableSkills.length) {
     throw new Error('Upstream .claude-plugin/plugin.json lists a skill more than once')
   }
+
+  const previewSkills = upstream.previewSkills
+  if (!Array.isArray(previewSkills)) {
+    throw new Error('.distribution/upstream.json must declare a previewSkills array')
+  }
+  if (new Set(previewSkills).size !== previewSkills.length) {
+    throw new Error('.distribution/upstream.json lists a preview Skill more than once')
+  }
+  for (const path of previewSkills) {
+    if (stableSkills.includes(path)) {
+      throw new Error('preview Skill ' + path + ' is already in the promoted set; drop it from previewSkills')
+    }
+  }
+  const betaSkills = [...stableSkills, ...previewSkills]
 
   return {
     stable: {
@@ -94,7 +117,17 @@ export async function buildChannelManifests() {
       stability: 'stable',
       upstreamCommit: upstream.commit,
       generatedFrom: '.claude-plugin/plugin.json',
-      skills
+      skills: stableSkills
+    },
+    beta: {
+      schemaVersion: 1,
+      channel: 'beta',
+      stability: 'beta',
+      upstreamCommit: upstream.commit,
+      generatedFrom: '.claude-plugin/plugin.json + .distribution/upstream.json',
+      extends: 'stable',
+      additionalSkills: [...previewSkills],
+      skills: betaSkills
     }
   }
 }

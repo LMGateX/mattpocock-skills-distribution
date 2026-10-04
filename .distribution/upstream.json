@@ -1,5 +1,5 @@
 {
-  "schemaVersion": 2,
+  "schemaVersion": 3,
   "repository": "https://github.com/mattpocock/skills",
   "remote": "upstream",
   "branch": "main",
@@ -7,5 +7,6 @@
   "commitDate": "2026-09-29T13:37:40+01:00",
   "recordedAt": "2026-10-04T12:23:55Z",
   "contentPolicy": "Upstream-owned files remain unchanged; distribution metadata is an overlay.",
+  "previewSkills": [],
   "upstreamContentSha256": "0920d97515b482e8db8ebd63a9bf6da0cefc0cc47cd5a891ee6224f8e88e3362"
 }
