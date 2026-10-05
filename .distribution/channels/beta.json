@@ -2,7 +2,7 @@
   "schemaVersion": 1,
   "channel": "beta",
   "stability": "beta",
-  "upstreamCommit": "d81f3a183412e71a5b1e84ca21bc1a35eea03a60",
+  "upstreamCommit": "24fe0ef7737efae15c87225755e9f6f5965e4888",
   "generatedFrom": ".claude-plugin/plugin.json + .distribution/upstream.json",
   "extends": "stable",
   "additionalSkills": [],

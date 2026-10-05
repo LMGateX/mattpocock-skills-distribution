@@ -1,10 +1,12 @@
 # Distribution
 
-This fork is a thin, reproducible distribution of [mattpocock/skills](https://github.com/mattpocock/skills). It does not rewrite upstream skill bodies and it does not contain harness-specific runtime adaptations.
+This fork is a thin, reproducible distribution of [mattpocock/skills](https://github.com/mattpocock/skills), pinned to an upstream release. It does not rewrite upstream skill bodies and it does not contain harness-specific runtime adaptations.
 
 ## Purpose
 
-Upstream promotes skills through `.claude-plugin/plugin.json`, but the promoted set only becomes consumable when upstream cuts a release. This fork exists so that a consumer can pin a commit that is already on upstream's `main` but not yet released, and resolve the promoted skill set from it reproducibly.
+Upstream ships one promoted skill set per release, listed in `.claude-plugin/plugin.json`. A consumer such as a DSH profile, though, selects a **channel** by name, and that name has to keep resolving even when there is nothing being previewed. This fork is the layer that turns upstream's single promoted set into a small, stable channel set, and records enough provenance to prove which upstream release those channels describe.
+
+It normally mirrors upstream rather than staging it: the pin is the commit an upstream release tag points at, and `.distribution/upstream.json` names that release under `upstreamRelease`. The field may be `null`, meaning the pin is deliberately ahead of every upstream release. What it may never be is a label that no longer points at the pinned commit, which both `update-upstream.mjs` and `verify-channels.mjs` reject.
 
 Two channels are always published:
 
@@ -19,11 +21,11 @@ The resolved channel manifests live under [`.distribution/channels/`](.distribut
 
 ## Current upstream baseline
 
-See [`.distribution/upstream.json`](.distribution/upstream.json) for the pinned upstream commit, commit date, and whole-tree content fingerprint.
+See [`.distribution/upstream.json`](.distribution/upstream.json) for the pinned upstream release, commit, commit date, and whole-tree content fingerprint.
 
-The pin may be ahead of the newest upstream release. v1.3 was merged to upstream `main`, but its version bump is still pending on upstream's release branch, so `.claude-plugin/plugin.json` at the pinned commit still reads `1.2.3`. The channel manifest describes the skill set at the pinned commit, not at the newest upstream tag.
+The channel manifests describe the skill set at the **pinned commit**, which is the commit `upstreamRelease` points at. When `upstreamRelease` is `null` the pin is ahead of every upstream release, and the manifests describe an unreleased `main`.
 
-The distribution version is independent of the upstream package version. A tag such as `v0.2.0` identifies this repository's own release; it does not claim that upstream published the same version.
+The distribution version is independent of the upstream package version. A tag such as `v0.3.0` identifies this repository's own release; it does not claim that upstream published the same version. To find which upstream release a distribution release describes, read `upstreamRelease` at that tag.
 
 ## Verify
 
@@ -35,6 +37,7 @@ Verification is self-contained for a checked-out release tag and does not requir
 
 - `.distribution/channels/` contains exactly the generated channels, with no stale files;
 - the closed channel set is `stable` + `beta`, and `beta` extends `stable`;
+- `upstreamRelease` is `null` or a tag that points at the pinned commit;
 - the stable channel exactly matches the included upstream Claude plugin manifest;
 - the beta additions equal the declared `previewSkills`;
 - every selected skill directory contains a `SKILL.md` whose declared name matches the directory;
