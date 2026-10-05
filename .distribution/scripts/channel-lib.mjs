@@ -75,6 +75,36 @@ export function workingContentDigest() {
 }
 
 /**
+ * Runs from a Git command whose output may legitimately be empty, unlike gitText,
+ * which trims and would collapse "no tags" and "one blank line" together.
+ */
+function gitLines(...args) {
+  return gitBuffer(...args).toString('utf8').split(/\r?\n/).filter(Boolean)
+}
+
+/**
+ * A recorded release must be the tag that actually points at the pinned commit, so
+ * the two can never drift apart. `null` is the deliberate "ahead of every upstream
+ * release" state and is accepted; a non-empty string that no longer resolves to the
+ * pin is an error rather than a silently stale label.
+ */
+export function assertUpstreamRelease(upstream) {
+  const release = upstream.upstreamRelease
+  if (release === null) return
+  if (typeof release !== 'string' || release.trim() === '') {
+    throw new Error('.distribution/upstream.json upstreamRelease must be a tag name or null')
+  }
+  const tags = gitLines('tag', '--points-at', upstream.commit)
+  if (!tags.includes(release)) {
+    throw new Error(
+      'Recorded upstreamRelease ' + release + ' does not point at upstream commit ' + upstream.commit +
+      '; set it to the tag that does, or to null when the pin is ahead of every release. Tags there: ' +
+      (tags.join(', ') || 'none')
+    )
+  }
+}
+
+/**
  * The two channels this distribution always publishes. `stable` mirrors upstream's
  * promoted set; `beta` is `stable` plus the explicitly previewed Skills. When
  * `previewSkills` is empty the two resolve to the same set, which is deliberate:
@@ -86,6 +116,8 @@ export const CHANNELS = ['stable', 'beta']
 export async function buildChannelManifests() {
   const upstream = await readJson('.distribution/upstream.json')
   const plugin = await readJson('.claude-plugin/plugin.json')
+
+  assertUpstreamRelease(upstream)
 
   if (!Array.isArray(plugin.skills) || plugin.skills.length === 0) {
     throw new Error('Upstream .claude-plugin/plugin.json has no skills array')
