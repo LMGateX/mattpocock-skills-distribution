@@ -3,11 +3,11 @@
   "repository": "https://github.com/mattpocock/skills",
   "remote": "upstream",
   "branch": "main",
-  "upstreamRelease": "v1.3.1",
-  "commit": "24fe0ef7737efae15c87225755e9f6f5965e4888",
-  "commitDate": "2026-10-04T13:48:05+01:00",
-  "recordedAt": "2026-10-05T04:18:48Z",
+  "upstreamRelease": "v1.3.2",
+  "commit": "d1478fcb140db0b93c0c8df17bcfd311844749d0",
+  "commitDate": "2026-10-29T10:27:29Z",
+  "recordedAt": "2026-10-31T11:49:05Z",
   "contentPolicy": "Upstream-owned files remain unchanged; distribution metadata is an overlay.",
   "previewSkills": [],
-  "upstreamContentSha256": "3d798a2d058ecfcfcfc91128e7d5c3869b6da352d74e1b59a825160f200f570f"
+  "upstreamContentSha256": "82092e4b2b0283298a202ab0e1fee777b0fa1526cfedbf6bb30029c914347537"
 }
